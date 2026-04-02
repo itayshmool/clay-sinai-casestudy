@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>When Clay Meets Sinai — Generative Canvas Effects Case Study</title>
+  <meta name="description" content="How we used Clay to create five bespoke generative canvas effects for Ananda Beach Camp's website." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --bg-elevated: #111114;
+      --bg-card: #16161a;
+      --border: #2a2a30;
+      --border-subtle: #1e1e24;
+      --text-primary: #e8e6e3;
+      --text-secondary: #9a9690;
+      --text-muted: #5c5955;
+      --accent: #e06b50;
+      --accent-glow: #e06b5040;
+      --reef: #1a9e8e;
+      --reef-glow: #1a9e8e30;
+      --ocean: #2e6a94;
+      --sand: #f2d9b0;
+      --sand-dim: #c9a06a;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'Outfit', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-weight: 300;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* ---- Grain Overlay ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ---- Layout ---- */
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 clamp(1.5rem, 4vw, 3rem);
+    }
+
+    .container-narrow {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 clamp(1.5rem, 4vw, 3rem);
+    }
+
+    section {
+      padding: clamp(5rem, 12vw, 10rem) 0;
+    }
+
+    /* ---- Typography ---- */
+    h1, h2, h3 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      line-height: 1.15;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 8vw, 6.5rem);
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+    }
+
+    h2 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+    }
+
+    h3 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: clamp(0.95rem, 1.1vw, 1.1rem);
+      max-width: 60ch;
+    }
+
+    .label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .label--accent {
+      color: var(--accent);
+    }
+
+    /* ---- Hero ---- */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding-bottom: clamp(4rem, 8vw, 8rem);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60%;
+      background: linear-gradient(to top, var(--bg), transparent);
+      z-index: 1;
+    }
+
+    .hero-canvas {
+      position: absolute;
+      inset: 0;
+      opacity: 0.4;
+    }
+
+    .hero-canvas canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .hero .container {
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero h1 {
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero p {
+      font-size: clamp(1rem, 1.3vw, 1.25rem);
+      max-width: 50ch;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 3rem;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .hero-meta-item .label {
+      margin-bottom: 0;
+    }
+
+    .hero-meta-item span:last-child {
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      font-weight: 400;
+    }
+
+    /* ---- Divider ---- */
+    .divider {
+      border: none;
+      height: 1px;
+      background: var(--border);
+      margin: 0;
+    }
+
+    /* ---- Concept ---- */
+    .concept-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .concept-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    }
+
+    .concept-grid p {
+      margin-bottom: 1.25rem;
+    }
+
+    .palette {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .palette-swatch {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      position: relative;
+      cursor: default;
+      transition: transform 0.2s;
+    }
+
+    .palette-swatch:hover {
+      transform: scale(1.15);
+    }
+
+    .palette-swatch::after {
+      content: attr(data-name);
+      position: absolute;
+      bottom: -1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.6rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .palette-swatch:hover::after {
+      opacity: 1;
+    }
+
+    .tech-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .tech-list li {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      padding-left: 1.25rem;
+      position: relative;
+    }
+
+    .tech-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.6rem;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--reef);
+    }
+
+    /* ---- Effects Showcase ---- */
+    .effects-section {
+      background: var(--bg-elevated);
+    }
+
+    .effect-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      overflow: hidden;
+      margin-bottom: 3rem;
+      background: var(--bg-card);
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .effect-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .effect-card { grid-template-columns: 1fr; }
+    }
+
+    .effect-preview {
+      position: relative;
+      min-height: 360px;
+      overflow: hidden;
+    }
+
+    .effect-preview canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .effect-number {
+      position: absolute;
+      top: 1.25rem;
+      left: 1.25rem;
+      z-index: 2;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      padding: 0.35rem 0.75rem;
+      border-radius: 2rem;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .effect-content {
+      padding: clamp(1.5rem, 3vw, 2.5rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .effect-content h3 {
+      font-size: clamp(1.4rem, 2.5vw, 2rem);
+    }
+
+    .effect-content p {
+      margin-bottom: 1rem;
+    }
+
+    .effect-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 1rem;
+    }
+
+    .effect-tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.05em;
+      padding: 0.3rem 0.7rem;
+      border-radius: 2rem;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: transparent;
+    }
+
+    .effect-tag--accent {
+      border-color: var(--accent-glow);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .effect-tag--reef {
+      border-color: var(--reef-glow);
+      color: var(--reef);
+      background: var(--reef-glow);
+    }
+
+    /* Light variant for cards showing dark-section effects */
+    .effect-card--light {
+      background: #f5f0e8;
+      border-color: #d9d0c2;
+    }
+
+    .effect-card--light .effect-content h3 {
+      color: #1a1a1a;
+    }
+
+    .effect-card--light .effect-content .label {
+      color: #8a7e6e;
+    }
+
+    .effect-card--light .effect-content p {
+      color: #4a4540;
+    }
+
+    .effect-card--light .prompt-block {
+      background: #ebe5da;
+      border-color: #d9d0c2;
+    }
+
+    .effect-card--light .prompt-block::before {
+      background: #ebe5da;
+      color: var(--accent);
+    }
+
+    .effect-card--light .prompt-block p {
+      color: #5c5550;
+    }
+
+    .effect-card--light .effect-tag {
+      border-color: #c9c0b2;
+      color: #6a6258;
+      background: transparent;
+    }
+
+    .effect-card--light .effect-tag--reef {
+      border-color: rgba(26,158,142,0.3);
+      color: #148076;
+      background: rgba(26,158,142,0.08);
+    }
+
+    .effect-card--light .clay-link {
+      border-color: rgba(224,107,80,0.3);
+      background: rgba(224,107,80,0.1);
+      color: #c4523a;
+    }
+
+    .effect-card--light .clay-link:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .clay-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.03em;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 0.45rem 1rem;
+      border: 1px solid var(--accent-glow);
+      border-radius: 2rem;
+      background: var(--accent-glow);
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .clay-link:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .clay-link svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ---- Prompt Section ---- */
+    .prompt-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: clamp(1.25rem, 2vw, 2rem);
+      margin-top: 1.5rem;
+      position: relative;
+    }
+
+    .prompt-block::before {
+      content: 'PROMPT';
+      position: absolute;
+      top: -0.5rem;
+      left: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      background: var(--bg-card);
+      padding: 0 0.5rem;
+      color: var(--accent);
+    }
+
+    .prompt-block p {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    /* ---- Process ---- */
+    .process-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .process-steps {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .process-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .process-step {
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: var(--bg-card);
+      transition: border-color 0.3s;
+    }
+
+    .process-step:hover {
+      border-color: var(--accent);
+    }
+
+    .process-step-num {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      color: var(--text-muted);
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+
+    .process-step h3 {
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    .process-step p {
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Architecture ---- */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .arch-grid { grid-template-columns: 1fr; }
+    }
+
+    .arch-card {
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: var(--bg-card);
+    }
+
+    .arch-card h3 {
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .arch-card p {
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+
+    .arch-card code {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.05);
+      padding: 0.15em 0.4em;
+      border-radius: 0.25rem;
+      color: var(--reef);
+    }
+
+    /* ---- Results ---- */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 768px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+
+    .result-stat {
+      text-align: center;
+      padding: 2rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      background: var(--bg-card);
+    }
+
+    .result-stat-value {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 4vw, 3.5rem);
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ---- Section Map ---- */
+    .section-map {
+      margin-top: 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .section-map-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 180px;
+      gap: 1.5rem;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    @media (max-width: 640px) {
+      .section-map-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+      .section-map-row span:nth-child(2) { grid-column: 1 / -1; order: -1; }
+    }
+
+    .section-map-row span:first-child {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .section-map-row span:nth-child(2) {
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      font-weight: 400;
+    }
+
+    .section-map-row span:last-child {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--reef);
+      text-align: right;
+    }
+
+    /* ---- Footer ---- */
+    .footer {
+      padding: 4rem 0;
+      text-align: center;
+    }
+
+    .footer p {
+      margin: 0 auto;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* ---- Scroll Animations ---- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Stagger children */
+    .stagger > * {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .stagger.visible > *:nth-child(1) { transition-delay: 0.05s; }
+    .stagger.visible > *:nth-child(2) { transition-delay: 0.1s; }
+    .stagger.visible > *:nth-child(3) { transition-delay: 0.15s; }
+    .stagger.visible > *:nth-child(4) { transition-delay: 0.2s; }
+    .stagger.visible > *:nth-child(5) { transition-delay: 0.25s; }
+    .stagger.visible > *:nth-child(6) { transition-delay: 0.3s; }
+    .stagger.visible > *:nth-child(7) { transition-delay: 0.35s; }
+    .stagger.visible > *:nth-child(8) { transition-delay: 0.4s; }
+    .stagger.visible > *:nth-child(9) { transition-delay: 0.45s; }
+
+    .stagger.visible > * {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-canvas" id="hero-canvas"></div>
+    <div class="container">
+      <span class="label label--accent">Case Study</span>
+      <h1>When Clay<br/>Meets <em>Sinai</em></h1>
+      <p>Five generative canvas effects, built with AI-powered creative tooling and hand-tuned for a Red Sea beach camp website. From prompt to production.</p>
+      <div class="hero-meta stagger" id="hero-meta">
+        <div class="hero-meta-item">
+          <span class="label">Client</span>
+          <span>Ananda Beach Camp</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="label">Location</span>
+          <span>Nuweiba, South Sinai</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="label">Stack</span>
+          <span>Next.js + Canvas 2D + WebGL</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="label">Effects</span>
+          <span>5 bespoke canvases</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ CONCEPT ============ -->
+  <section>
+    <div class="container">
+      <span class="label">01 &mdash; Concept</span>
+      <h2>Where the Desert<br/>Meets the Sea</h2>
+      <div class="concept-grid">
+        <div class="reveal">
+          <p>Ananda Beach Camp sits at the edge of the Sinai desert, where terracotta mountains fall into turquoise water. The site needed backgrounds that felt alive &mdash; not stock photos with overlays, but hand-crafted generative scenes that breathe.</p>
+          <p>Each section of the homepage carries a different canvas effect, matched to its content. Light sections get warm, sandy textures. Dark sections get deep underwater scenes. Every effect responds to the mouse and respects <code style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--reef);">prefers-reduced-motion</code>.</p>
+          <p style="margin-top: 1.5rem;">
+            <span class="label" style="margin-bottom: 0.5rem;">Color Palette</span>
+          </p>
+          <div class="palette">
+            <div class="palette-swatch" style="background: #0c1a26;" data-name="ocean-900"></div>
+            <div class="palette-swatch" style="background: #1b3d57;" data-name="ocean-700"></div>
+            <div class="palette-swatch" style="background: #2e6a94;" data-name="ocean-500"></div>
+            <div class="palette-swatch" style="background: #1a9e8e;" data-name="reef-500"></div>
+            <div class="palette-swatch" style="background: #5dd4c2;" data-name="reef-300"></div>
+            <div class="palette-swatch" style="background: #e06b50;" data-name="coral-500"></div>
+            <div class="palette-swatch" style="background: #b5532f;" data-name="terra-500"></div>
+            <div class="palette-swatch" style="background: #f2d9b0;" data-name="sand-200"></div>
+            <div class="palette-swatch" style="background: #fdf8f0;" data-name="sand-50"></div>
+          </div>
+        </div>
+        <div class="reveal">
+          <span class="label">Tech Decisions</span>
+          <ul class="tech-list">
+            <li><strong>Canvas 2D</strong> for procedural scenes (mountains, coral, water) &mdash; smaller bundle, wider support</li>
+            <li><strong>WebGL + GLSL shaders</strong> for the tidal sand ripples &mdash; GPU-accelerated caustic math</li>
+            <li><strong>simplex-noise</strong> for organic movement &mdash; Perlin-style noise without the grid artifacts</li>
+            <li><strong>IntersectionObserver</strong> pauses off-screen canvases &mdash; zero wasted frames</li>
+            <li><strong>ResizeObserver</strong> handles responsive and RTL layout shifts</li>
+            <li><strong>getCanvasQuality()</strong> detects low-end devices &mdash; reduces DPR, particles, or skips entirely</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ EFFECTS ============ -->
+  <section class="effects-section">
+    <div class="container">
+      <span class="label">02 &mdash; The Effects</span>
+      <h2>Five Canvases,<br/>One Coastline</h2>
+      <p style="margin-bottom: 3rem;">Each effect was generated through Clay &mdash; an AI creative tool that outputs interactive HTML/Canvas micro-apps from a single-paragraph prompt. The raw output was then converted to production React components, stripped of dependencies, and optimized for mobile.</p>
+
+      <!-- Effect 1: Desert Mountains -->
+      <div class="effect-card" id="card-1">
+        <div class="effect-preview" id="preview-desert">
+          <span class="effect-number">01 / 05</span>
+        </div>
+        <div class="effect-content">
+          <span class="label">Light Sections</span>
+          <h3>Desert Mountains</h3>
+          <p>A parallax desert landscape with layered mountain ridges, animated sky gradient, sun/moon cycle, twinkling stars, and sea with wave lines. Mouse Y controls time-of-day; mouse X shifts the parallax.</p>
+          <div class="prompt-block">
+            <p>Create a desert mountain parallax landscape with 4 layered ridges using fractal noise. Sky gradient shifts from night (deep ocean blue #0c1a26) through dawn (sand #f9edd8) to sunset (terracotta #dba35a) based on mouse Y position. Include twinkling stars at night, a sun/moon that arcs across the sky, horizon glow at sunset, and animated wave lines on the sea below using reef turquoise #33bfaa. Mouse X controls subtle parallax shift on mountain layers.</p>
+          </div>
+          <div class="effect-tags">
+            <span class="effect-tag effect-tag--accent">Canvas 2D</span>
+            <span class="effect-tag">simplex-noise</span>
+            <span class="effect-tag">6-octave fractal</span>
+            <span class="effect-tag">parallax</span>
+            <span class="effect-tag">day/night cycle</span>
+          </div>
+          <a class="clay-link" href="https://clay.base44.app/ToolViewer?slug=desert-mountains-meeting-the-sea-mng937hn" target="_blank" rel="noopener noreferrer">View in Clay <svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a>
+        </div>
+      </div>
+
+      <!-- Effect 2: Water Surface -->
+      <div class="effect-card" id="card-2">
+        <div class="effect-preview" id="preview-water">
+          <span class="effect-number">02 / 05</span>
+        </div>
+        <div class="effect-content">
+          <span class="label">Light Sections</span>
+          <h3>Water Surface Caustics</h3>
+          <p>Realistic underwater caustic light patterns rendered per-pixel on an offscreen buffer. Click to create expanding ripple distortions. The light drifts with a configurable current direction.</p>
+          <div class="prompt-block">
+            <p>Create realistic water caustics over a sandy ocean floor. Use 3D simplex noise to generate layered caustic patterns at three frequencies, with a drifting current at 90 degrees. Base color: sand #f2d9b0. Caustic highlights blend warm #e8c080 and cool #ccf2ec tones. Render to an offscreen buffer at 0.35x resolution for performance, then upscale with bilinear smoothing. Click to spawn expanding circular ripple distortions. Add a subtle teal tint overlay.</p>
+          </div>
+          <div class="effect-tags">
+            <span class="effect-tag effect-tag--accent">Canvas 2D</span>
+            <span class="effect-tag">noise3D</span>
+            <span class="effect-tag">offscreen buffer</span>
+            <span class="effect-tag">per-pixel</span>
+            <span class="effect-tag">click ripples</span>
+          </div>
+          <a class="clay-link" href="https://clay.base44.app/ToolViewer?slug=red-sea-water-surface-mngbj464" target="_blank" rel="noopener noreferrer">View in Clay <svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a>
+        </div>
+      </div>
+
+      <!-- Effect 3: Coral Reef -->
+      <div class="effect-card effect-card--light" id="card-3">
+        <div class="effect-preview" id="preview-coral">
+          <span class="effect-number">03 / 05</span>
+        </div>
+        <div class="effect-content">
+          <span class="label">Dark Sections</span>
+          <h3>Coral Reef</h3>
+          <p>Procedurally generated coral trees that sway with noise-driven motion. Rising bubble particles drift through caustic light lines. Mouse proximity bends the coral branches. Used across all four dark sections.</p>
+          <div class="prompt-block">
+            <p>Create an underwater coral reef scene on a deep ocean gradient from #0c1a26 to #1b3d57. Generate 15 procedural coral trees from the bottom with recursive branching (4-7 depth levels), colored in coral #e06b50, terra #b5532f, and reef #1a9e8e. Corals sway using 3D simplex noise and bend toward the mouse cursor within 250px. Add 300 rising bubble particles in #ccf2ec and #a3c5de with noise-driven horizontal drift. Overlay animated caustic light lines using screen blending.</p>
+          </div>
+          <div class="effect-tags">
+            <span class="effect-tag effect-tag--reef">Canvas 2D</span>
+            <span class="effect-tag">noise3D</span>
+            <span class="effect-tag">recursive trees</span>
+            <span class="effect-tag">300 particles</span>
+            <span class="effect-tag">screen blend</span>
+          </div>
+          <a class="clay-link" href="https://clay.base44.app/ToolViewer?slug=underwater-coral-reef-mng8h97a" target="_blank" rel="noopener noreferrer">View in Clay <svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a>
+        </div>
+      </div>
+
+      <!-- Effect 4: Tidal Sand Ripples -->
+      <div class="effect-card" id="card-4">
+        <div class="effect-preview" id="preview-tidal">
+          <span class="effect-number">04 / 05</span>
+        </div>
+        <div class="effect-content">
+          <span class="label">Light Sections</span>
+          <h3>Tidal Sand Ripples</h3>
+          <p>A WebGL fragment shader running simplex noise in GLSL to produce real-time caustic ridges over sand. Mouse proximity creates a soft exponential distortion. The only effect using the GPU pipeline &mdash; converted from Clay's p5.js output to vanilla WebGL.</p>
+          <div class="prompt-block">
+            <p>Create tidal sand ripples using a full-screen WebGL fragment shader. Implement simplex noise in GLSL at three octaves (1x, 2.1x, 4.3x frequency) with time-based drift. Generate caustic ridges using pow(1.0 - abs(noise), 8.0). Add shadow depth using offset noise at pow 4. Base sand color vec3(0.949, 0.851, 0.690). Mouse position creates exponential distortion within 15-unit falloff radius. Drift the pattern horizontally at 0.025 units/sec.</p>
+          </div>
+          <div class="effect-tags">
+            <span class="effect-tag effect-tag--accent">WebGL + GLSL</span>
+            <span class="effect-tag">fragment shader</span>
+            <span class="effect-tag">GPU caustics</span>
+            <span class="effect-tag">mouse distortion</span>
+          </div>
+          <a class="clay-link" href="https://clay.base44.app/ToolViewer?slug=tidal-sand-ripples-mnggjan2" target="_blank" rel="noopener noreferrer">View in Clay <svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a>
+        </div>
+      </div>
+
+      <!-- Effect 5: Sinai Starfield -->
+      <div class="effect-card effect-card--light" id="card-5">
+        <div class="effect-preview" id="preview-starfield">
+          <span class="effect-number">05 / 05</span>
+        </div>
+        <div class="effect-content">
+          <span class="label">Dark Sections</span>
+          <h3>Sinai Starfield</h3>
+          <p>A bioluminescent deep-sea starfield with drifting points of light over a dark ocean gradient. Particles pulse with varying intensity and drift gently, evoking both the night sky over the Sinai desert and bioluminescent plankton beneath the surface.</p>
+          <div class="prompt-block">
+            <p>Create a Sinai starfield effect on a deep ocean gradient from #0a0f1a to #0c1a26. Scatter 200+ luminous particles across the canvas — mix tiny pinpoint stars (1-2px, white/ice-blue) with larger bioluminescent orbs (3-6px, reef turquoise #1a9e8e and #5dd4c2) that pulse slowly using sine-wave opacity. Add a subtle radial glow around the larger particles. Drift all particles gently downward and laterally with simplex noise. Mouse proximity causes nearby particles to brighten and expand. Include 3-4 faint nebula-like color washes in coral #e06b5015 and reef #1a9e8e10 using large radial gradients that drift slowly.</p>
+          </div>
+          <div class="effect-tags">
+            <span class="effect-tag effect-tag--reef">Canvas 2D</span>
+            <span class="effect-tag">bioluminescence</span>
+            <span class="effect-tag">200+ particles</span>
+            <span class="effect-tag">pulse opacity</span>
+            <span class="effect-tag">nebula wash</span>
+          </div>
+          <a class="clay-link" href="https://clay.base44.app/ToolViewer?slug=sinai-starfield-mnggh6ud" target="_blank" rel="noopener noreferrer">View in Clay <svg viewBox="0 0 24 24"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ PROCESS ============ -->
+  <section>
+    <div class="container">
+      <span class="label">03 &mdash; Process</span>
+      <h2>From Prompt<br/>to Production</h2>
+      <p>Clay generates interactive HTML files from natural language. But shipping those files into a Next.js production site requires a deliberate conversion pipeline.</p>
+      <div class="process-steps stagger" id="process-steps">
+        <div class="process-step">
+          <div class="process-step-num">1</div>
+          <h3>Prompt</h3>
+          <p>Write a single-paragraph description specifying algorithms, color hex codes, interactivity, and performance constraints.</p>
+        </div>
+        <div class="process-step">
+          <div class="process-step-num">2</div>
+          <h3>Generate</h3>
+          <p>Clay outputs a self-contained HTML file with inline JS. Usually p5.js instance mode or vanilla Canvas 2D.</p>
+        </div>
+        <div class="process-step">
+          <div class="process-step-num">3</div>
+          <h3>Convert</h3>
+          <p>Strip p5.js dependency. Rewrite as a React useEffect with vanilla Canvas/WebGL. Add IntersectionObserver, ResizeObserver, and perf detection.</p>
+        </div>
+        <div class="process-step">
+          <div class="process-step-num">4</div>
+          <h3>Ship</h3>
+          <p>Integrate as a 'use client' component. Position absolute behind section content with pointer-events: none. Deploy to Vercel.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section>
+    <div class="container">
+      <span class="label">04 &mdash; Architecture</span>
+      <h2>Performance<br/>by Default</h2>
+      <p>Five simultaneous canvas effects on a single page could destroy mobile performance. Every decision was made to keep the site at 60fps on mid-range devices.</p>
+      <div class="arch-grid stagger" id="arch-grid">
+        <div class="arch-card">
+          <h3>Device Detection</h3>
+          <p><code>getCanvasQuality()</code> checks <code>hardwareConcurrency</code>, viewport width, and <code>devicePixelRatio</code>. Low-end devices get halved particle counts and DPR capped at 1.</p>
+        </div>
+        <div class="arch-card">
+          <h3>Reduced Motion</h3>
+          <p>If <code>prefers-reduced-motion: reduce</code> is set, canvases skip initialization entirely. Zero JS overhead, zero animation. The section backgrounds become solid colors via CSS overlays.</p>
+        </div>
+        <div class="arch-card">
+          <h3>Off-Screen Pausing</h3>
+          <p><code>IntersectionObserver</code> sets an <code>isVisible</code> flag. The animation loop still runs (to avoid cold-start jank) but skips all draw calls when the canvas is scrolled out of view.</p>
+        </div>
+        <div class="arch-card">
+          <h3>Offscreen Buffers</h3>
+          <p>The Water Surface effect renders per-pixel noise at 0.35x resolution on an offscreen canvas, then upscales with bilinear smoothing. 8x fewer pixels calculated per frame.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ SECTION MAP ============ -->
+  <section>
+    <div class="container">
+      <span class="label">05 &mdash; Section Map</span>
+      <h2>Effect Distribution</h2>
+      <p>Each homepage section uses a specific canvas effect. Dark and light effects alternate to create visual rhythm.</p>
+      <div class="section-map stagger" id="section-map">
+        <div class="section-map-row">
+          <span>ABOUT</span>
+          <span>Desert Mountains</span>
+          <span>light &middot; canvas 2d</span>
+        </div>
+        <div class="section-map-row">
+          <span>ACCOMMODATIONS</span>
+          <span>Coral Reef</span>
+          <span>dark &middot; canvas 2d</span>
+        </div>
+        <div class="section-map-row">
+          <span>ACTIVITIES</span>
+          <span>Tidal Sand Ripples</span>
+          <span>light &middot; webgl</span>
+        </div>
+        <div class="section-map-row">
+          <span>GALLERY</span>
+          <span>Coral Reef</span>
+          <span>dark &middot; canvas 2d</span>
+        </div>
+        <div class="section-map-row">
+          <span>DINING</span>
+          <span>Water Surface</span>
+          <span>light &middot; canvas 2d</span>
+        </div>
+        <div class="section-map-row">
+          <span>TESTIMONIALS</span>
+          <span>Coral Reef</span>
+          <span>dark &middot; canvas 2d</span>
+        </div>
+        <div class="section-map-row">
+          <span>LOCATION</span>
+          <span>Desert Mountains</span>
+          <span>light &middot; canvas 2d</span>
+        </div>
+        <div class="section-map-row">
+          <span>CTA</span>
+          <span>Sinai Starfield</span>
+          <span>dark &middot; canvas 2d</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ RESULTS ============ -->
+  <section>
+    <div class="container">
+      <span class="label">06 &mdash; Results</span>
+      <h2>Numbers</h2>
+      <div class="results-grid stagger" id="results-grid">
+        <div class="result-stat">
+          <div class="result-stat-value">5</div>
+          <div class="result-stat-label">Bespoke canvas effects</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">0</div>
+          <div class="result-stat-label">External animation libraries</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">60</div>
+          <div class="result-stat-label">Target FPS on mid-range</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">8</div>
+          <div class="result-stat-label">Homepage sections with effects</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">~0</div>
+          <div class="result-stat-label">JS overhead with reduced-motion</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value">2</div>
+          <div class="result-stat-label">Rendering pipelines (2D + WebGL)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <p>Built with Clay &times; Claude Code for <a href="https://ananda-eta-dusky.vercel.app" target="_blank" rel="noopener">Ananda Beach Camp</a></p>
+  </footer>
+
+  <script>
+    // ---- Scroll Reveal ----
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal, .stagger, .effect-card').forEach(el => observer.observe(el));
+
+    // Trigger hero meta immediately after a slight delay
+    setTimeout(() => {
+      document.getElementById('hero-meta')?.classList.add('visible');
+    }, 400);
+
+    // ---- Mini Canvas Previews ----
+    // These are simplified versions of the actual effects, just for the case study cards.
+
+    // HERO: ambient floating particles
+    (function heroCanvas() {
+      const wrap = document.getElementById('hero-canvas');
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let w, h;
+      const particles = Array.from({ length: 80 }, () => ({
+        x: Math.random(), y: Math.random(),
+        vx: (Math.random() - 0.5) * 0.0003,
+        vy: (Math.random() - 0.5) * 0.0003,
+        r: Math.random() * 2 + 0.5,
+        a: Math.random() * 0.3 + 0.05,
+      }));
+
+      function resize() {
+        w = wrap.clientWidth; h = wrap.clientHeight;
+        canvas.width = w; canvas.height = h;
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        for (const p of particles) {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > 1) p.vx *= -1;
+          if (p.y < 0 || p.y > 1) p.vy *= -1;
+          ctx.beginPath();
+          ctx.arc(p.x * w, p.y * h, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(224,107,80,${p.a})`;
+          ctx.fill();
+        }
+        // connections
+        ctx.strokeStyle = 'rgba(224,107,80,0.04)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < particles.length; i++) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = (particles[i].x - particles[j].x) * w;
+            const dy = (particles[i].y - particles[j].y) * h;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 120) {
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x * w, particles[i].y * h);
+              ctx.lineTo(particles[j].x * w, particles[j].y * h);
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      draw();
+    })();
+
+    // PREVIEW 1: Desert Mountains (simplified)
+    (function() {
+      const wrap = document.getElementById('preview-desert');
+      if (!wrap) return;
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      function resize() {
+        w = wrap.clientWidth; h = wrap.clientHeight;
+        canvas.width = w * 1.5; canvas.height = h * 1.5;
+        canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+        ctx.setTransform(1.5, 0, 0, 1.5, 0, 0);
+      }
+
+      function draw(t) {
+        const time = t * 0.0005;
+        ctx.clearRect(0, 0, w, h);
+
+        // Sky
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#1b3d57');
+        g.addColorStop(0.5, '#e8c080');
+        g.addColorStop(1, '#dba35a');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+
+        // Sun
+        const sy = h * 0.25 + Math.sin(time * 0.3) * h * 0.05;
+        ctx.beginPath();
+        ctx.arc(w * 0.7, sy, 20, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffcc00';
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#ff880060';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Mountains
+        const mColors = ['#553a1c', '#6b2f1c', '#b5532f', '#c98a3a'];
+        const seaY = h * 0.6;
+        for (let i = 0; i < 4; i++) {
+          ctx.fillStyle = mColors[i];
+          ctx.beginPath();
+          ctx.moveTo(0, h);
+          const base = seaY * (0.75 + i * 0.08);
+          for (let x = 0; x <= w; x += 3) {
+            const y = base - (Math.sin(x * 0.01 * (i+1) + i * 2 + time * 0.2) * 0.5 + 0.5) * (h * 0.12 - i * 8);
+            ctx.lineTo(x, y);
+          }
+          ctx.lineTo(w, h);
+          ctx.fill();
+        }
+
+        // Sea
+        const sg = ctx.createLinearGradient(0, seaY, 0, h);
+        sg.addColorStop(0, '#2e6a94');
+        sg.addColorStop(1, '#0c1a26');
+        ctx.fillStyle = sg;
+        ctx.fillRect(0, seaY, w, h - seaY);
+
+        // Waves
+        for (let i = 0; i < 4; i++) {
+          ctx.strokeStyle = `rgba(93,212,194,${0.25 - i * 0.05})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          const ry = seaY + i * (h - seaY) / 4;
+          for (let x = 0; x <= w; x += 8) {
+            const wy = ry + Math.sin(x * 0.03 + time * 2 + i) * 6;
+            x === 0 ? ctx.moveTo(x, wy) : ctx.lineTo(x, wy);
+          }
+          ctx.stroke();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      new ResizeObserver(resize).observe(wrap);
+      resize();
+      requestAnimationFrame(draw);
+    })();
+
+    // PREVIEW 2: Water Caustics (simplified)
+    (function() {
+      const wrap = document.getElementById('preview-water');
+      if (!wrap) return;
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      function resize() {
+        w = wrap.clientWidth; h = wrap.clientHeight;
+        canvas.width = w; canvas.height = h;
+      }
+
+      function draw(t) {
+        const time = t * 0.001;
+        ctx.fillStyle = '#f2d9b0';
+        ctx.fillRect(0, 0, w, h);
+
+        // Caustic lines
+        ctx.strokeStyle = 'rgba(204,242,236,0.3)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 20; i++) {
+          ctx.beginPath();
+          for (let y = 0; y < h; y += 4) {
+            const x = i * (w / 20) + Math.sin(y * 0.015 + time * 0.8 + i * 0.5) * 30
+              + Math.cos(y * 0.008 - time * 0.5 + i * 0.3) * 20;
+            y === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        // Warm caustic highlights
+        for (let i = 0; i < 8; i++) {
+          const cx = w * (0.1 + 0.1 * i) + Math.sin(time * 0.4 + i) * 40;
+          const cy = h * 0.5 + Math.cos(time * 0.3 + i * 2) * 60;
+          const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+          rg.addColorStop(0, 'rgba(232,192,128,0.15)');
+          rg.addColorStop(1, 'rgba(232,192,128,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(cx - 80, cy - 80, 160, 160);
+        }
+
+        // Teal overlay
+        ctx.fillStyle = 'rgba(51,191,170,0.08)';
+        ctx.fillRect(0, 0, w, h);
+
+        requestAnimationFrame(draw);
+      }
+
+      new ResizeObserver(resize).observe(wrap);
+      resize();
+      requestAnimationFrame(draw);
+    })();
+
+    // PREVIEW 3: Coral Reef (simplified)
+    (function() {
+      const wrap = document.getElementById('preview-coral');
+      if (!wrap) return;
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let w, h;
+      let branches = [];
+
+      function genBranch(x, y, angle, len, depth, maxD, color) {
+        if (depth >= maxD) return;
+        const ex = x + Math.cos(angle) * len;
+        const ey = y + Math.sin(angle) * len;
+        branches.push({ x1: x, y1: y, x2: ex, y2: ey, thickness: (maxD - depth) * 2, color, depth });
+        const n = Math.random() > 0.6 ? 3 : 2;
+        for (let i = 0; i < n; i++) {
+          genBranch(ex, ey, angle + (Math.random() - 0.5) * 1.2, len * 0.72, depth + 1, maxD, color);
+        }
+      }
+
+      function initBranches() {
+        branches = [];
+        const colors = ['#e06b50', '#f08872', '#b5532f', '#1a9e8e'];
+        for (let i = 0; i < 10; i++) {
+          const x = (i / 10) * w + Math.random() * (w / 10);
+          const c = colors[Math.floor(Math.random() * colors.length)];
+          genBranch(x, h + 5, -Math.PI / 2 + (Math.random() - 0.5) * 0.3, 35, 0, 4 + Math.floor(Math.random() * 3), c);
+        }
+      }
+
+      function resize() {
+        w = wrap.clientWidth; h = wrap.clientHeight;
+        canvas.width = w * 1.5; canvas.height = h * 1.5;
+        canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+        ctx.setTransform(1.5, 0, 0, 1.5, 0, 0);
+        initBranches();
+      }
+
+      const bubbles = Array.from({ length: 60 }, () => ({
+        x: Math.random(), y: Math.random(), r: Math.random() * 2 + 0.5,
+        vy: -0.0005 - Math.random() * 0.001, a: 0.1 + Math.random() * 0.3,
+      }));
+
+      function draw(t) {
+        const time = t * 0.001;
+        ctx.clearRect(0, 0, w, h);
+
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#0c1a26');
+        g.addColorStop(1, '#1b3d57');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+
+        // Bubbles
+        for (const b of bubbles) {
+          b.y += b.vy;
+          b.x += Math.sin(time + b.x * 10) * 0.0003;
+          if (b.y < -0.02) { b.y = 1.02; b.x = Math.random(); }
+          ctx.beginPath();
+          ctx.arc(b.x * w, b.y * h, b.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(204,242,236,${b.a})`;
+          ctx.fill();
+        }
+
+        // Coral branches with sway
+        for (const br of branches) {
+          const sway = Math.sin(time * 0.8 + br.x1 * 0.01 + br.depth) * 4 * (br.depth / 5);
+          ctx.beginPath();
+          ctx.moveTo(br.x1 + sway * 0.5, br.y1);
+          ctx.lineTo(br.x2 + sway, br.y2);
+          ctx.lineWidth = br.thickness;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = br.color;
+          ctx.stroke();
+        }
+
+        // Caustic lines
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.1;
+        ctx.strokeStyle = '#99e5d8';
+        ctx.lineWidth = 1;
+        for (let i = -1; i < w / 50 + 1; i++) {
+          ctx.beginPath();
+          for (let y = 0; y < h; y += 20) {
+            const x = i * 50 + Math.sin(y * 0.006 + time * 0.5 + i * 0.3) * 25;
+            y === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        requestAnimationFrame(draw);
+      }
+
+      new ResizeObserver(resize).observe(wrap);
+      resize();
+      requestAnimationFrame(draw);
+    })();
+
+    // PREVIEW 4: Tidal Sand Ripples (simplified, no WebGL for compatibility)
+    (function() {
+      const wrap = document.getElementById('preview-tidal');
+      if (!wrap) return;
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      function resize() {
+        w = wrap.clientWidth; h = wrap.clientHeight;
+        canvas.width = w; canvas.height = h;
+      }
+
+      function draw(t) {
+        const time = t * 0.0008;
+        ctx.fillStyle = '#f2d9b0';
+        ctx.fillRect(0, 0, w, h);
+
+        // Ripple lines (simplified caustics)
+        for (let i = 0; i < 30; i++) {
+          const baseY = (i / 30) * h;
+          ctx.beginPath();
+          ctx.strokeStyle = i % 2 === 0 ? 'rgba(219,163,90,0.25)' : 'rgba(204,242,236,0.12)';
+          ctx.lineWidth = 1.5;
+          for (let x = 0; x <= w; x += 3) {
+            const y = baseY
+              + Math.sin(x * 0.012 + time * 1.5 + i * 0.7) * 8
+              + Math.cos(x * 0.008 - time * 0.8 + i * 1.1) * 5
+              + Math.sin(x * 0.025 + time * 2.5) * 3;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        // Light spots
+        for (let i = 0; i < 6; i++) {
+          const cx = w * (0.15 + 0.12 * i) + Math.sin(time * 0.6 + i * 1.5) * 50;
+          const cy = h * 0.5 + Math.cos(time * 0.4 + i * 2) * 80;
+          const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
+          rg.addColorStop(0, 'rgba(255,255,255,0.08)');
+          rg.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(cx - 60, cy - 60, 120, 120);
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      new ResizeObserver(resize).observe(wrap);
+      resize();
+      requestAnimationFrame(draw);
+    })();
+
+    // PREVIEW 5: Sinai Starfield (bioluminescent particles)
+    (function() {
+      const wrap = document.getElementById('preview-starfield');
+      if (!wrap) return;
+      const canvas = document.createElement('canvas');
+      wrap.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      let w, h;
+
+      const stars = Array.from({ length: 150 }, () => ({
+        x: Math.random(), y: Math.random(),
+        r: Math.random() < 0.7 ? Math.random() * 1.5 + 0.5 : Math.random() * 3 + 2,
+        color: Math.random() < 0.5 ? '#5dd4c2' : Math.random() < 0.7 ? '#1a9e8e' : '#e8e6e3',
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.5 + Math.random() * 1.5,
+        baseA: 0.2 + Math.random() * 0.6,
+        vy: 0.00005 + Math.random() * 0.00015,
+        vx: (Math.random() - 0.5) * 0.00008,
+      }));
+
+      // Nebula washes
+      const nebulae = [
+        { x: 0.25, y: 0.3, r: 0.35, color: 'rgba(224,107,80,0.04)' },
+        { x: 0.7, y: 0.6, r: 0.3, color: 'rgba(26,158,142,0.05)' },
+        { x: 0.5, y: 0.8, r: 0.25, color: 'rgba(93,212,194,0.03)' },
+      ];
+
+      function resize() {
+        w = wrap.clientWidth; h = wrap.clientHeight;
+        canvas.width = w * 1.5; canvas.height = h * 1.5;
+        canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+        ctx.setTransform(1.5, 0, 0, 1.5, 0, 0);
+      }
+
+      function draw(t) {
+        const time = t * 0.001;
+        ctx.clearRect(0, 0, w, h);
+
+        // Background gradient
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#0a0f1a');
+        g.addColorStop(1, '#0c1a26');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+
+        // Nebula washes
+        for (const n of nebulae) {
+          const nx = n.x * w + Math.sin(time * 0.15 + n.x * 5) * 30;
+          const ny = n.y * h + Math.cos(time * 0.12 + n.y * 3) * 20;
+          const rg = ctx.createRadialGradient(nx, ny, 0, nx, ny, n.r * w);
+          rg.addColorStop(0, n.color);
+          rg.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(0, 0, w, h);
+        }
+
+        // Stars
+        for (const s of stars) {
+          s.y += s.vy;
+          s.x += s.vx + Math.sin(time * 0.3 + s.phase) * 0.00005;
+          if (s.y > 1.05) { s.y = -0.05; s.x = Math.random(); }
+          if (s.x < -0.05) s.x = 1.05;
+          if (s.x > 1.05) s.x = -0.05;
+
+          const pulse = s.baseA + Math.sin(time * s.speed + s.phase) * 0.25;
+          const a = Math.max(0.05, Math.min(1, pulse));
+          const px = s.x * w;
+          const py = s.y * h;
+
+          // Glow for larger stars
+          if (s.r > 2) {
+            const glowR = s.r * 4;
+            const rgb = s.color === '#5dd4c2' ? '93,212,194' :
+                        s.color === '#1a9e8e' ? '26,158,142' : '232,230,227';
+            const rg = ctx.createRadialGradient(px, py, 0, px, py, glowR);
+            rg.addColorStop(0, `rgba(${rgb},${a * 0.35})`);
+            rg.addColorStop(1, `rgba(${rgb},0)`);
+            ctx.fillStyle = rg;
+            ctx.beginPath();
+            ctx.arc(px, py, glowR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Core
+          ctx.beginPath();
+          ctx.arc(px, py, s.r, 0, Math.PI * 2);
+          const coreColor = s.color === '#5dd4c2' ? `rgba(93,212,194,${a})` :
+                            s.color === '#1a9e8e' ? `rgba(26,158,142,${a})` :
+                            `rgba(232,230,227,${a})`;
+          ctx.fillStyle = coreColor;
+          ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      new ResizeObserver(resize).observe(wrap);
+      resize();
+      requestAnimationFrame(draw);
+    })();
+  </script>
+
+</body>
+</html>
